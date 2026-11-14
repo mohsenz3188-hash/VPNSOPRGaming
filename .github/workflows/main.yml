@@ -26,8 +26,21 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Generate missing Android wrapper files if needed
-        run: flutter create --platforms=android --org com.vpnsopr --project-name vpn_sopr_gaming .
+      - name: Initialize Android wrapper and organize project structure
+        run: |
+          flutter create --platforms=android --org com.vpnsopr --project-name vpn_sopr_gaming .
+          mkdir -p lib/models lib/services lib/theme lib/screens android/app/src/main
+          [ -f main.dart ] && mv -f main.dart lib/main.dart
+          [ -f vpn_config.dart ] && mv -f vpn_config.dart lib/models/vpn_config.dart
+          [ -f vpn_engine_service.dart ] && mv -f vpn_engine_service.dart lib/services/vpn_engine_service.dart
+          [ -f dragon_theme.dart ] && mv -f dragon_theme.dart lib/theme/dragon_theme.dart
+          [ -f dashboard_screen.dart ] && mv -f dashboard_screen.dart lib/screens/dashboard_screen.dart
+          [ -f configs_screen.dart ] && mv -f configs_screen.dart lib/screens/configs_screen.dart
+          [ -f logs_screen.dart ] && mv -f logs_screen.dart lib/screens/logs_screen.dart
+          [ -f settings_screen.dart ] && mv -f settings_screen.dart lib/screens/settings_screen.dart
+          [ -f AndroidManifest.xml ] && mv -f AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          [ -f gradle.properties ] && mv -f gradle.properties android/gradle.properties
+          [ -f build.gradle ] && mv -f build.gradle android/app/build.gradle
 
       - name: Force Android minSdk 24 and compileSdk 35
         run: |
@@ -39,7 +52,6 @@ jobs:
                   txt = re.sub(r'(minSdk(?:Version)?\s*=?\s*)(?:flutter\.minSdkVersion|\d+)', r'\g<1>24', txt)
                   txt = re.sub(r'(compileSdk(?:Version)?\s*=?\s*)(?:flutter\.compileSdkVersion|\d+)', r'\g<1>35', txt)
                   p.write_text(txt)
-                  print("Patched", p)
           EOF
 
       - name: Install dependencies
