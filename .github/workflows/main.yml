@@ -29,6 +29,19 @@ jobs:
       - name: Generate missing Android wrapper files if needed
         run: flutter create --platforms=android --org com.vpnsopr --project-name vpn_sopr_gaming .
 
+      - name: Force Android minSdk 24 and compileSdk 35
+        run: |
+          python3 - <<'EOF'
+          import re, pathlib
+          for p in [pathlib.Path("android/app/build.gradle"), pathlib.Path("android/app/build.gradle.kts")]:
+              if p.exists():
+                  txt = p.read_text()
+                  txt = re.sub(r'(minSdk(?:Version)?\s*=?\s*)(?:flutter\.minSdkVersion|\d+)', r'\g<1>24', txt)
+                  txt = re.sub(r'(compileSdk(?:Version)?\s*=?\s*)(?:flutter\.compileSdkVersion|\d+)', r'\g<1>35', txt)
+                  p.write_text(txt)
+                  print("Patched", p)
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -40,3 +53,4 @@ jobs:
         with:
           name: vpn-sopr-gaming-apks
           path: build/app/outputs/flutter-apk/*.apk
+          
