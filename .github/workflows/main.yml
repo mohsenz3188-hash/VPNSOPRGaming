@@ -42,8 +42,17 @@ jobs:
           [ -f gradle.properties ] && mv -f gradle.properties android/gradle.properties
           [ -f build.gradle ] && mv -f build.gradle android/app/build.gradle
 
-      - name: Patch compatibility, safe async startup, and Android SDK
+      - name: Fix MainActivity package, compatibility, and Android SDK
         run: |
+          mkdir -p android/app/src/main/kotlin/com/vpnsopr/gaming
+          cat <<'KOTLIN' > android/app/src/main/kotlin/com/vpnsopr/gaming/MainActivity.kt
+          package com.vpnsopr.gaming
+
+          import io.flutter.embedding.android.FlutterActivity
+
+          class MainActivity: FlutterActivity()
+          KOTLIN
+
           python3 - <<'EOF'
           import re, pathlib
           for p in pathlib.Path("lib").rglob("*.dart"):
@@ -57,7 +66,7 @@ jobs:
           if main_p.exists():
               m = main_p.read_text()
               m = m.replace("void main() async {", "void main() {")
-              m = m.replace("await engine.initialize();", "engine.initialize();")
+              m = m.replace("await engine.initialize();", "Future.microtask(() => engine.initialize());")
               main_p.write_text(m)
 
           svc_p = pathlib.Path("lib/services/vpn_engine_service.dart")
