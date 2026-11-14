@@ -42,7 +42,7 @@ jobs:
           [ -f gradle.properties ] && mv -f gradle.properties android/gradle.properties
           [ -f build.gradle ] && mv -f build.gradle android/app/build.gradle
 
-      - name: Patch Flutter 3.24.5 compatibility and Android SDK
+      - name: Patch compatibility, safe async startup, and Android SDK
         run: |
           python3 - <<'EOF'
           import re, pathlib
@@ -52,6 +52,31 @@ jobs:
               txt = txt.replace('CardThemeData(', 'CardTheme(')
               txt = txt.replace('final WireGuardFlutterInterface _wireGuard = WireGuardFlutter.instance;', 'final _wireGuard = WireGuardFlutter.instance;')
               p.write_text(txt)
+
+          main_p = pathlib.Path("lib/main.dart")
+          if main_p.exists():
+              m = main_p.read_text()
+              m = m.replace("void main() async {", "void main() {")
+              m = m.replace("await engine.initialize();", "engine.initialize();")
+              main_p.write_text(m)
+
+          svc_p = pathlib.Path("lib/services/vpn_engine_service.dart")
+          if svc_p.exists():
+              s = svc_p.read_text()
+              s = s.replace(
+                  "await _v2ray.initializeV2Ray(\n      notificationIconResourceType: 'mipmap',\n      notificationIconResourceName: 'ic_launcher',\n    );",
+                  "try {\n      await _v2ray.initializeV2Ray(\n        notificationIconResourceType: 'mipmap',\n        notificationIconResourceName: 'ic_launcher',\n      );\n    } catch (e) {\n      _addLog('V2Ray init error: $e');\n    }"
+              )
+              s = s.replace(
+                  "await _openVpn.initialize(\n      groupIdentifier: 'group.com.vpnsopr.gaming',\n      providerBundleIdentifier: 'com.vpnsopr.gaming.VPNExtension',\n      localizedDescription: 'VPN SOPR Gaming',\n    );",
+                  "try {\n      await _openVpn.initialize(\n        groupIdentifier: 'group.com.vpnsopr.gaming',\n        providerBundleIdentifier: 'com.vpnsopr.gaming.VPNExtension',\n        localizedDescription: 'VPN SOPR Gaming',\n      );\n    } catch (e) {\n      _addLog('OpenVPN init error: $e');\n    }"
+              )
+              s = s.replace(
+                  "await _wireGuard.initialize(interfaceName: 'wg_sopr0');",
+                  "try {\n      await _wireGuard.initialize(interfaceName: 'wg_sopr0');\n    } catch (e) {\n      _addLog('WireGuard init error: $e');\n    }"
+              )
+              svc_p.write_text(s)
+
           for p in [pathlib.Path("android/app/build.gradle"), pathlib.Path("android/app/build.gradle.kts")]:
               if p.exists():
                   txt = p.read_text()
