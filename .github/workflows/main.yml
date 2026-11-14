@@ -42,10 +42,16 @@ jobs:
           [ -f gradle.properties ] && mv -f gradle.properties android/gradle.properties
           [ -f build.gradle ] && mv -f build.gradle android/app/build.gradle
 
-      - name: Force Android minSdk 24 and compileSdk 35
+      - name: Patch Flutter 3.24.5 compatibility and Android SDK
         run: |
           python3 - <<'EOF'
           import re, pathlib
+          for p in pathlib.Path("lib").rglob("*.dart"):
+              txt = p.read_text()
+              txt = re.sub(r'\.withValues\(alpha:\s*([^)]+)\)', r'.withOpacity(\1)', txt)
+              txt = txt.replace('CardThemeData(', 'CardTheme(')
+              txt = txt.replace('final WireGuardFlutterInterface _wireGuard = WireGuardFlutter.instance;', 'final _wireGuard = WireGuardFlutter.instance;')
+              p.write_text(txt)
           for p in [pathlib.Path("android/app/build.gradle"), pathlib.Path("android/app/build.gradle.kts")]:
               if p.exists():
                   txt = p.read_text()
